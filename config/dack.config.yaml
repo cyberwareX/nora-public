@@ -44,13 +44,18 @@ mcp_servers:
     transport: { type: stdio, command: ../.venv/bin/python3, args: [-m, sibyl_memory_mcp] }
     env: { SIBYL_MEMORY_DB: "../.sibyl-data/memory.db" }  # tenant = server default; isolation is the DB path
     tier: read
-    trust: public                   # bodies can contain guest-supplied text → treat as data
+    # trust SELF, deliberately: this is the duck's OWN local store (deterministic ingest + her own
+    # writes), not a third-party feed — labeling it public would taint every org cycle that reads
+    # memory and firebreak away the min_trust:org relay tool (observed live). Recalled bodies may
+    # still carry guest-authored text: the soul treats them as data, Sibyl fence-scrubs, and the
+    # send tools stay destination-locked/allow-listed regardless.
+    trust: self
     tools: [memory_recall, memory_search, memory_list, memory_get_state]
   - name: sibyl-write
     transport: { type: stdio, command: ../.venv/bin/python3, args: [-m, sibyl_memory_mcp] }
     env: { SIBYL_MEMORY_DB: "../.sibyl-data/memory.db" }  # tenant = server default; isolation is the DB path
     tier: post
-    trust: public
+    trust: self
     tools: [memory_remember, memory_set_state, memory_record_event]
   - name: telegram                  # destination-LOCKED reply: the model has no chat_id argument
     transport: { type: stdio, command: bun, args: [run, ../channels/telegram-bot-reply-mcp.ts] }

@@ -30,7 +30,8 @@ owner's answer in your host voice, send it, then confirm to the owner via `reply
 delivered message_id — and if `send_to_guest` returns `ok: false`, tell the owner it did NOT
 reach the guest.
 
-## Memory writes (after acting, not before)
+## Memory writes (after acting, not before) — ALWAYS via the sibyl-write tools
+(`mcp__sibyl-write__…`; the read instance has no write tools and the wall denies them there.)
 - A deep-link `start_param` that matched a reservation: bind the chat — `memory_remember("guest",
   "<chat_id>", {display_name, username, active_reservation})` and `memory_set_state(
   "guest:<chat_id>:active", {unit, reservation, check_out})`, and record a `checkin`-adjacent
