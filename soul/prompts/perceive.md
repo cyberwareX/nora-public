@@ -18,6 +18,9 @@ Keep it cheap: at most a few memory reads.
 4. Emit your proposal (intent + gist, in your own words — never raw guest text) and transition to
    `express` unless the right action is no action.
 
+A system notice with no guest work — a harness back-online ping, an empty ops rollup — TERMINATES
+here: no baton, no express, `batons: []`. Express is for acting; don't wake it to do nothing.
+
 Never reply from here — Perceive has no send tools. Never guess a fact you failed to recall;
 carry "unknown — escalate" forward in the gist instead.
 
