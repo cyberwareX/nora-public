@@ -1,0 +1,46 @@
+# The demo property — seed truth for Sibyl. Owners fork this file for their own place.
+business_name: "Cedar Loft Stays"
+host_name: "Nora"
+
+units:
+  A1:
+    address: "Cedar Loft, 12 Birchweg, staircase B (map pin in your welcome message)"
+    wifi_ssid: "CedarLoft-A1"
+    wifi_pass: "demo-only-passw0rd"
+    parking: "Courtyard spot #3 — enter from Birchweg, code at the gate keypad is NOT needed before 22:00"
+    checkin_time: "15:00"
+    checkout_time: "11:00"
+    quirks: "The kitchen tap needs a firm push left. Heating panel is behind the wardrobe door."
+  A2:
+    address: "Cedar Loft, 12 Birchweg, staircase B, 2nd floor"
+    wifi_ssid: "CedarLoft-A2"
+    wifi_pass: "demo-only-sunfl0wer"
+    parking: "Street parking free 18:00–09:00; paid zone P2 otherwise"
+    checkin_time: "15:00"
+    checkout_time: "11:00"
+    quirks: "Balcony door sticks in warm weather — lift the handle while pulling."
+
+policies:
+  early-checkin:
+    reply_text: "Early check-in depends on the previous guest's checkout and cleaning — I'll check with the owner and confirm. Usually 13:00 is possible, but I can't promise it yet."
+    escalate: true
+  late-checkout:
+    reply_text: "Late checkout until 12:00 is usually fine on days without a same-day arrival — let me confirm and get back to you."
+    escalate: true
+  deposit:
+    reply_text: "The deposit is handled entirely by the booking platform — we never take payments in chat. It's released automatically a few days after checkout."
+    escalate: false
+  checkin-requirements:
+    reply_text: "Check-in is from 15:00. You'll get the exact arrival instructions here the morning of your stay — any government photo ID works."
+    escalate: false
+  pets:
+    reply_text: "Small pets are welcome in A1 (not A2) with a heads-up in advance — just tell me who's coming!"
+    escalate: false
+
+kb_cases:
+  wifi-not-connecting:
+    situation: "Guest says wifi won't connect / drops"
+    resolution: "Ask them to forget the network and rejoin with the exact password (case-sensitive); router restart switch is under the TV shelf; if still down, escalate — the owner can remote-restart."
+  heating-cold:
+    situation: "Apartment feels cold"
+    resolution: "Heating panel behind the wardrobe door (A1) / hallway panel (A2): set to 21°. Takes ~30 min. If the panel shows an error code, escalate with the code."

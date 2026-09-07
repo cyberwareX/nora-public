@@ -1,0 +1,13 @@
+{
+  "listen": "127.0.0.1:8794",
+  "op_chat_ids": [111111111],
+  "cleaners_chat_ids": [],
+  "severity_routes": {
+    "escalation": ["telegram"],
+    "alert": ["telegram"],
+    "error": ["telegram"],
+    "info": ["telegram"]
+  },
+  "dedup_window_sec": 600,
+  "hourly_cap": 20
+}

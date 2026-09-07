@@ -4,15 +4,22 @@
 
 soul_repo: soul
 db_path: dack.sqlite
-runlog_dir: soul/runlogs
+
+# Identities (dack keygen --dir identities/operator --role operator; …soul/identity --role soul).
+# Fresh deploys generate their own; the demo's run.sh does it for you. Never commit identity.pem.
+operator_did: "did:key:z6MkjA1cuYHqLGEkafYEgikYcmrfbo3rkaS7MGgZfXDmnNm4"
+identities: { operator: "identities/operator", soul: "soul/identity" }
 
 # The consciousness runtime: the openclaude bridge over any OpenAI-compatible gateway.
 runtime:
-  engine: openclaude
-  connector: opengateway            # OPENAI_BASE_URL/OPENAI_API_KEY/OPENAI_MODEL from env at boot
+  engine: { type: openclaude, bridge_dir: dack-engine/openclaude-bridge }
+  connector: { type: opengateway }  # OPENAI_BASE_URL/OPENAI_API_KEY/OPENAI_MODEL from env at boot
 invoke_timeout_secs: 300
 
-webserver: { addr: "127.0.0.1:8792" }
+# The op-notify lane: terminal cycle failures POST here (fire-and-forget). See notify/router.ts.
+notify_url: "http://127.0.0.1:8794/notify"
+
+webhook_addr: "127.0.0.1:8792"
 
 # Per-webhook trust anchor: the PATH is the provenance (the ingress only assigns paths).
 webhooks:
@@ -32,24 +39,27 @@ trust_tiers:
 # pattern. `env` pins the DB into the repo tree (never let it default to ~/.sibyl-memory).
 mcp_servers:
   - name: sibyl-read
-    transport: { type: stdio, command: .venv/bin/python3, args: [-m, sibyl_memory_mcp] }
-    env: { SIBYL_MEMORY_DB: ".sibyl-data/memory.db", SIBYL_TENANT_ID: "nora" }
+    # Paths are RELATIVE TO THE AGENT'S WORKDIR — the SOUL repo (the bridge chdirs there
+    # before loading the SDK, so MCP stdio servers spawn from soul/) — hence ../
+    transport: { type: stdio, command: ../.venv/bin/python3, args: [-m, sibyl_memory_mcp] }
+    env: { SIBYL_MEMORY_DB: "../.sibyl-data/memory.db", SIBYL_TENANT_ID: "nora" }
     tier: read
     trust: public                   # bodies can contain guest-supplied text → treat as data
     tools: [memory_recall, memory_search, memory_list, memory_get_state]
   - name: sibyl-write
-    transport: { type: stdio, command: .venv/bin/python3, args: [-m, sibyl_memory_mcp] }
-    env: { SIBYL_MEMORY_DB: ".sibyl-data/memory.db", SIBYL_TENANT_ID: "nora" }
+    transport: { type: stdio, command: ../.venv/bin/python3, args: [-m, sibyl_memory_mcp] }
+    env: { SIBYL_MEMORY_DB: "../.sibyl-data/memory.db", SIBYL_TENANT_ID: "nora" }
     tier: post
     trust: public
     tools: [memory_remember, memory_set_state, memory_record_event]
   - name: telegram                  # destination-LOCKED reply: the model has no chat_id argument
-    transport: { type: stdio, command: bun, args: [run, channels/telegram-bot-reply-mcp.ts] }
+    transport: { type: stdio, command: bun, args: [run, ../channels/telegram-bot-reply-mcp.ts] }
     auth: { secret: telegram_bot, env: TELEGRAM_BOT_TOKEN }
     tier: post
     scope_env: { TELEGRAM_REPLY_CHAT: chat_id, TELEGRAM_REPLY_TO: message_id }
   - name: escalate                  # notify lane producer: reaches the OPERATOR, never a guest chat
-    transport: { type: stdio, command: bun, args: [run, channels/escalate-mcp.ts] }
+    transport: { type: stdio, command: bun, args: [run, ../channels/escalate-mcp.ts] }
+    env: { ESCALATION_LOG: "../escalations.jsonl" }
     tier: post
     trust: self
     scope_env: { ESCALATE_SOURCE_CHAT: chat_id }
@@ -68,7 +78,7 @@ memory_write_min_trust: org         # soul markdown writes stay org+; guest-cycl
 secrets_providers:
   - name: telegram_bot
     command: ["python3", "dack-engine/secrets-providers/file_token.py"]
-    env: { TOKEN_FILE: "secrets/telegram.token" }
+    env: { TOKEN_FILE: "secrets/telegram.token", TOKEN_KEY: "TELEGRAM_BOT_TOKEN" }
     keys: [TELEGRAM_BOT_TOKEN]
 
 # ── Channels (harness-supervised modules) ───────────────────────────────────────────────────────
@@ -77,7 +87,8 @@ modules:
     command: [bun, run, channels/telegram-ingress.ts]
     secrets: [telegram_bot]
     env: { TELEGRAM_INGRESS_CONFIG: telegram-ingress.config.json }
-  # Day-2: notify router (op notifications: harness failures, ingest alerts, escalations)
-  # - name: notify-router
-  #   command: [bun, run, notify/router.ts]
-  #   secrets: [telegram_bot]
+  - name: notify-router             # op notifications: harness failures, ingest alerts, escalations
+    command: [bun, run, notify/router.ts]
+    secrets: [telegram_bot]
+  - name: booking-ingest            # email → Sibyl → /bookings wake (zero-LLM writer)
+    command: [.venv/bin/python3, ingest/mail_bookings.py, --transport, dir, --watch]

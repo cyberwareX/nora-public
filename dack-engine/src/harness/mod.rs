@@ -288,6 +288,20 @@ impl Harness {
         // logging-not-rollback: a failed run is a tagged entry + a terminal `failed` row.
         self.log_dispatch_failure(snap, &err).await;
         let _ = self.queue.update_status(&snap.id, StimulusStatus::Failed).await;
+        // Op-notify (fire-and-forget): a terminal failure is exactly what the operator lane exists
+        // for — a silently-failed wake is a user the agent never answered. Spawned + timeboxed so
+        // a down router can never slow the consciousness loop.
+        if let Some(url) = self.config.notify_url.clone() {
+            let title = format!("cycle failed: {}", snap.id);
+            let body = format!("{err}");
+            tokio::spawn(async move {
+                let _ = tokio::time::timeout(
+                    std::time::Duration::from_secs(5),
+                    notify_post(&url, &title, &body),
+                )
+                .await;
+            });
+        }
     }
 
     #[tracing::instrument(
@@ -1667,6 +1681,40 @@ const MAX_LINEAGE_DEPTH: usize = 4;
 /// without looping forever on a persistently-broken one. Applies to any durable unit — a plain
 /// stimulus AND a deferred baton-continuation (which is a stimulus), so async batons inherit it.
 const MAX_TIMEOUT_RETRIES: u32 = 3;
+
+/// Fire-and-forget POST to the op-notify router (the `notify_url` config). Hand-rolled HTTP/1.1
+/// over a plain TcpStream — the failure-REPORTING path deliberately adds no HTTP-client dependency
+/// and never reads the response (the router's jsonl is the audit; we never block on delivery).
+/// `http://host:port/path` only — the router is a localhost sibling by design.
+async fn notify_post(url: &str, title: &str, body_text: &str) {
+    let Some(rest) = url.strip_prefix("http://") else {
+        tracing::warn!("notify_url must be http://host:port/path — notification dropped");
+        return;
+    };
+    let (host, path) = match rest.split_once('/') {
+        Some((h, p)) => (h.to_string(), format!("/{p}")),
+        None => (rest.to_string(), "/notify".to_string()),
+    };
+    let payload = serde_json::json!({
+        "severity": "error",
+        "source": "harness",
+        "title": title,
+        "body": body_text,
+    })
+    .to_string();
+    let req = format!(
+        "POST {path} HTTP/1.1\r\nHost: {host}\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{payload}",
+        payload.len()
+    );
+    match tokio::net::TcpStream::connect(&host).await {
+        Ok(mut s) => {
+            use tokio::io::AsyncWriteExt;
+            let _ = s.write_all(req.as_bytes()).await;
+            let _ = s.flush().await;
+        }
+        Err(e) => tracing::warn!("op-notify router unreachable ({host}): {e}"),
+    }
+}
 
 /// Backoff (seconds) before re-attempting a timed-out wake — grows with the attempt so a hung
 /// provider isn't hammered.

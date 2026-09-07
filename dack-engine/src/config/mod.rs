@@ -705,6 +705,12 @@ pub struct DackConfig {
     /// else. Applies ONLY to Reflect; every other state keeps the default.
     #[serde(default)]
     pub reflect_invoke_timeout_secs: Option<u64>,
+    /// Optional op-notify router URL (e.g. `http://127.0.0.1:8794/notify`). A TERMINAL dispatch
+    /// failure — a cycle the harness gives up on — POSTs `{severity:"error", …}` there,
+    /// fire-and-forget: the lane that reports failure must never become a failure mode itself.
+    /// `None` = off. (The notify-lane primitive; connector routing lives in the router.)
+    #[serde(default)]
+    pub notify_url: Option<String>,
     /// MCP tool-name **prefixes** the wall treats as REVERSIBLE capabilities → `ToolClass::Post`
     /// (allowed in Express). The duck's act-phase tools, e.g. `mcp__twitter__` (post/reply).
     #[serde(default = "default_post_tools")]

@@ -18,3 +18,9 @@ node_modules/
 /soul/identity/identity.pem
 .sibyl-data/
 .venv/
+/telegram-ingress.config.json
+/notify.config.json
+*.sqlite-shm
+*.sqlite-wal
+/dack.health.json
+*.jsonl
