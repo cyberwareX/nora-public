@@ -57,6 +57,15 @@ mcp_servers:
     auth: { secret: telegram_bot, env: TELEGRAM_BOT_TOKEN }
     tier: post
     scope_env: { TELEGRAM_REPLY_CHAT: chat_id, TELEGRAM_REPLY_TO: message_id }
+  - name: telegram-send             # PRIVILEGED relay: operator-lane answer → a KNOWN guest chat.
+    # min_trust org ⇒ assembled only for operator cycles; the target is verified against Sibyl
+    # guest/reservation entities + the escalation log — an unknown id refuses, fail-closed.
+    transport: { type: stdio, command: bun, args: [run, ../channels/telegram-send-mcp.ts] }
+    auth: { secret: telegram_bot, env: TELEGRAM_BOT_TOKEN }
+    env: { SIBYL_MEMORY_DB: "../.sibyl-data/memory.db", ESCALATION_LOG: "../escalations.jsonl", SENDS_LOG: "../sends.jsonl" }
+    tier: post
+    trust: self
+    min_trust: org
   - name: escalate                  # notify lane producer: reaches the OPERATOR, never a guest chat
     transport: { type: stdio, command: bun, args: [run, ../channels/escalate-mcp.ts] }
     env: { ESCALATION_LOG: "../escalations.jsonl" }
@@ -69,7 +78,7 @@ mcp_servers:
 # deployment lost its whole Perceive toolset to that distinction; the import list below is the fix.)
 tier_policy:
   perceive: { mcp_whitelist: false, import: [sibyl-read] }
-  express:  { import: [telegram, sibyl-read, sibyl-write, escalate] }
+  express:  { import: [telegram, telegram-send, sibyl-read, sibyl-write, escalate] }
   settle:   { import: [] }
   reflect:  { import: [], allow_model_override: true }
 

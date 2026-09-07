@@ -18,6 +18,9 @@ type Notification = {
   source?: string
   title?: string
   body?: string
+  /** The guest chat behind an escalation — surfaced in the delivered text so the operator's
+   *  answer can name it and the relay tool can verify it. */
+  source_chat?: string | null
 }
 
 type Cfg = {
@@ -103,7 +106,7 @@ async function deliver(n: Notification): Promise<{ delivered: boolean; suppresse
   stormNoticed = false
 
   const chats = n.audience === 'cleaners' && cfg.cleaners_chat_ids.length ? cfg.cleaners_chat_ids : cfg.op_chat_ids
-  const text = `${ICON[n.severity] ?? ''} ${n.title ?? n.severity}\n${n.body ?? ''}${n.source ? `\n— ${n.source}` : ''}`
+  const text = `${ICON[n.severity] ?? ''} ${n.title ?? n.severity}\n${n.body ?? ''}${n.source_chat ? `\nguest chat: ${n.source_chat}` : ''}${n.source ? `\n— ${n.source}` : ''}`
   let ok = false
   for (const id of chats) ok = (await tgSend(id, text)) || ok
   if (ok) {
