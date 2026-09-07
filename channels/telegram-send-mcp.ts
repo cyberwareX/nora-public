@@ -86,6 +86,29 @@ server.registerTool(
   },
   async ({ chat_id, text }: { chat_id: string; text: string }) => {
     const target = chat_id.trim()
+    // Idempotency: an identical (chat, text) that already DELIVERED within the window is not sent
+    // again — return the prior success so a model "making sure" can't double-message a guest
+    // (observed live: message_ids 22+23, 49s apart, same 254 chars).
+    const DUP_WINDOW_SEC = 600
+    try {
+      if (existsSync(SENDS_LOG)) {
+        const now = Math.floor(Date.now() / 1000)
+        for (const line of readFileSync(SENDS_LOG, 'utf8').trim().split('\n').slice(-50)) {
+          try {
+            const p = JSON.parse(line)
+            if (p.ok && p.chat_id === target && p.chars === text.length && now - p.at < DUP_WINDOW_SEC) {
+              audit({ tool: 'send_to_guest', chat_id: target, ok: true, suppressed: 'duplicate', message_id: p.message_id, chars: text.length })
+              console.error(`[telegram-send] duplicate suppressed (already delivered message_id=${p.message_id})`)
+              return asText({ ok: true, message_id: p.message_id, chat_id: target, note: 'already delivered — duplicate suppressed, nothing re-sent' })
+            }
+          } catch {
+            /* skip */
+          }
+        }
+      }
+    } catch (e) {
+      console.error('[telegram-send] dup check failed (sending anyway):', e)
+    }
     const check = isKnownGuestChat(target)
     if (!check.known) {
       audit({ tool: 'send_to_guest', chat_id: target, ok: false, refused: 'unknown-chat', chars: text.length })
