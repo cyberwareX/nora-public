@@ -1,0 +1,45 @@
+# openclaude directory, separate repo
+/openclaude-0.18.0
+/openclaude-0.21.0
+
+# agent soul, not tracked in this repo
+/soul-template
+
+# rust
+/target
+**/*.rs.bk
+
+# embedded SQLite queue (ephemeral; PRD §9.3) + WAL sidecars — never commit
+/dack.sqlite
+/dack.sqlite-wal
+/dack.sqlite-shm
+# runtime health snapshot the daemon writes for `dack status` (ephemeral) + its write-tmp
+/dack.health.json
+/dack.health.tmp
+Cargo.lock        # binary crate, but harness is deployed as a built artifact; keep lock out of v1 churn
+
+# operator secrets & real config — never commit
+/dack.config.yaml
+/run/secrets/
+/secrets/
+*.did.key
+*.token
+
+# gitlawb identity keypairs (operator/soul/builder identity.pem) — never commit.
+# The Soul key is narrative-ending if leaked; all three live here only for local dev.
+/identities/
+
+# X / Twitter API credentials (RW keys) + rotated OAuth2 token store — never commit
+*.x.txt
+*.x.json
+*.tokens.json
+
+# editor
+/.idea/
+.DS_Store
+
+# Telegram ingress adapter config (operator rails — chat/user routing)
+openclaude-bridge/telegram-ingress.config.json
+
+# Private design docs (PRD/architecture/build-plan) — local only, never public
+docs/internal/

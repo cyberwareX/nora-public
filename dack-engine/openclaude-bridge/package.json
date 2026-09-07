@@ -1,0 +1,14 @@
+{
+  "name": "openclaude-bridge",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "DACK ↔ OpenClaude stdio bridge — drives the OpenClaude SDK for the Rust harness (the TS side of the runtime seam).",
+  "scripts": {
+    "start": "bun run bridge.ts"
+  },
+  "dependencies": {
+    "@gitlawb/openclaude": "0.18.0",
+    "grammy": "^1.44.0"
+  }
+}

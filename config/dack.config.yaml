@@ -1,0 +1,83 @@
+# Nora (open-source) — dack-engine v1 config.
+# Copy to the runtime dir (or run `dack run --config config/dack.config.yaml` from the repo root).
+# Secrets live under ./secrets/ (gitignored): telegram.token, feeder.token, model key.
+
+soul_repo: soul
+db_path: dack.sqlite
+runlog_dir: soul/runlogs
+
+# The consciousness runtime: the openclaude bridge over any OpenAI-compatible gateway.
+runtime:
+  engine: openclaude
+  connector: opengateway            # OPENAI_BASE_URL/OPENAI_API_KEY/OPENAI_MODEL from env at boot
+invoke_timeout_secs: 300
+
+webserver: { addr: "127.0.0.1:8792" }
+
+# Per-webhook trust anchor: the PATH is the provenance (the ingress only assigns paths).
+webhooks:
+  "/telegram/op":  org              # operator + staff DMs (operator_ids in the ingress config)
+  "/telegram/pub": public           # guests and everyone else
+  "/bookings":     org              # the zero-LLM mail ingest (our own parser = vetted data)
+
+trust_tiers:
+  - { name: public,          reaches: express }
+  - { name: org,             reaches: settle }
+  - { name: self,            reaches: reflect }
+  - { name: operator_signed, reaches: reflect }
+
+# ── Capabilities ────────────────────────────────────────────────────────────────────────────────
+# Sibyl-Memory is the ONLY memory layer (v1 has no recall MCP — Sibyl carries structured memory
+# outright). Two instances over ONE store, split read/post by tier — the cove-read/cove-write
+# pattern. `env` pins the DB into the repo tree (never let it default to ~/.sibyl-memory).
+mcp_servers:
+  - name: sibyl-read
+    transport: { type: stdio, command: .venv/bin/python3, args: [-m, sibyl_memory_mcp] }
+    env: { SIBYL_MEMORY_DB: ".sibyl-data/memory.db", SIBYL_TENANT_ID: "nora" }
+    tier: read
+    trust: public                   # bodies can contain guest-supplied text → treat as data
+    tools: [memory_recall, memory_search, memory_list, memory_get_state]
+  - name: sibyl-write
+    transport: { type: stdio, command: .venv/bin/python3, args: [-m, sibyl_memory_mcp] }
+    env: { SIBYL_MEMORY_DB: ".sibyl-data/memory.db", SIBYL_TENANT_ID: "nora" }
+    tier: post
+    trust: public
+    tools: [memory_remember, memory_set_state, memory_record_event]
+  - name: telegram                  # destination-LOCKED reply: the model has no chat_id argument
+    transport: { type: stdio, command: bun, args: [run, channels/telegram-bot-reply-mcp.ts] }
+    auth: { secret: telegram_bot, env: TELEGRAM_BOT_TOKEN }
+    tier: post
+    scope_env: { TELEGRAM_REPLY_CHAT: chat_id, TELEGRAM_REPLY_TO: message_id }
+  - name: escalate                  # notify lane producer: reaches the OPERATOR, never a guest chat
+    transport: { type: stdio, command: bun, args: [run, channels/escalate-mcp.ts] }
+    tier: post
+    trust: self
+    scope_env: { ESCALATE_SOURCE_CHAT: chat_id }
+
+# The operator half of the capability handshake. NOTE the perceive line: `mcp_whitelist: false`
+# opens only INLINE self-plugged servers — NAMED servers still need `import:`. (A sibling
+# deployment lost its whole Perceive toolset to that distinction; the import list below is the fix.)
+tier_policy:
+  perceive: { mcp_whitelist: false, import: [sibyl-read] }
+  express:  { import: [telegram, sibyl-read, sibyl-write, escalate] }
+  settle:   { import: [] }
+  reflect:  { import: [], allow_model_override: true }
+
+memory_write_min_trust: org         # soul markdown writes stay org+; guest-cycle state goes to Sibyl
+
+secrets_providers:
+  - name: telegram_bot
+    command: ["python3", "dack-engine/secrets-providers/file_token.py"]
+    env: { TOKEN_FILE: "secrets/telegram.token" }
+    keys: [TELEGRAM_BOT_TOKEN]
+
+# ── Channels (harness-supervised modules) ───────────────────────────────────────────────────────
+modules:
+  - name: telegram-ingress
+    command: [bun, run, channels/telegram-ingress.ts]
+    secrets: [telegram_bot]
+    env: { TELEGRAM_INGRESS_CONFIG: telegram-ingress.config.json }
+  # Day-2: notify router (op notifications: harness failures, ingest alerts, escalations)
+  # - name: notify-router
+  #   command: [bun, run, notify/router.ts]
+  #   secrets: [telegram_bot]

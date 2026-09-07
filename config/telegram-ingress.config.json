@@ -1,0 +1,8 @@
+{
+  "harness_webhook": "http://127.0.0.1:8792",
+  "operator_ids": [111111111],
+  "op_path": "/telegram/op",
+  "pub_path": "/telegram/pub",
+  "groups": {},
+  "excluded_groups": []
+}

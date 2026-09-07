@@ -1,0 +1,54 @@
+[package]
+name = "dack"
+version = "0.1.0"
+edition = "2021"
+description = "DACK actor-scheduler harness — a self-sovereign, event-driven DAC actor runtime"
+license = "MIT"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Dependency policy for the scaffold (Phase 1):
+#   Keep the dependency tree small and pure-Rust so the box stays tiny and the
+#   first `cargo build` is fast and offline-friendly. Heavyweight integration
+#   crates are added only when their phase begins:
+#     - Phase 3 (bus/queue/web): rusqlite (bundled), axum, notify, cron
+#     - Phase 4 (runtime):       tonic + prost  (needs `protoc`; that's why it
+#                                is deferred until the action_required audit
+#                                in Phase 0 has confirmed the runtime choice)
+# Until then the seam traits compile against stub adapters.
+# ─────────────────────────────────────────────────────────────────────────────
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+serde_yaml = "0.9"
+thiserror = "1"
+anyhow = "1"
+async-trait = "0.1"
+futures = "0.3"  # FutureExt::catch_unwind — panic-isolate each dispatch cycle
+tracing = "0.1"  # structured, leveled, span-aware operational logging (correlation for the multi-threaded scheduler)
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }  # RUST_LOG filter + JSON for docker-logs
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "process", "time", "sync", "fs", "io-util", "net", "signal"] }
+clap = { version = "4", features = ["derive"] }
+rusqlite = { version = "0.31", features = ["bundled"] }
+cron = "0.12"
+chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
+axum = "0.7"
+notify = "6"
+sha2 = "0.10"   # operator-signed sensor scripts: sha256(source) → trust tier (the taint seed)
+# Phase 8 — operator_signed provenance (`dack say`): decode `did:key` → ed25519 pubkey and
+# verify the signature in-process (no `gl` verify command exists; provenance is a local crypto check).
+# `pkcs8`+`pem` = the native `LocalIdentity` backend: read/write the PKCS8 Ed25519 `identity.pem`
+# directly (no gitlawb `gl` CLI needed) + `dack keygen`.
+ed25519-dalek = { version = "2", features = ["pkcs8", "pem"] }
+pkcs8 = { version = "0.10", features = ["pem"] } # LineEnding for writing the identity.pem
+getrandom = "0.2" # CSPRNG seed for `dack keygen` (native Ed25519 identity generation)
+bs58 = "0.5"    # multibase base58btc body of a `did:key`
+base64 = "0.22" # the Ed25519 signature encoding (base64url)
+
+[profile.release]
+# Disposable $10 box: favour a small static binary over raw speed.
+opt-level = "z"
+lto = true
+strip = true
+codegen-units = 1
+panic = "abort"

@@ -1,0 +1,20 @@
+# secrets & runtime state — never commit (patterns ANCHORED: unanchored secrets/ or state/
+# once swallowed the engine's src/secrets + src/state in a sibling repo — never again)
+/secrets/
+*.token
+*.key
+*.pem
+.env
+/mail/
+/demo/outbox/
+*.sqlite
+*.log
+__pycache__/
+*.pyc
+node_modules/
+/dack-engine/target/
+/soul/runlogs/
+/soul/workspaces/
+/soul/identity/identity.pem
+.sibyl-data/
+.venv/

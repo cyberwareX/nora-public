@@ -1,0 +1,34 @@
+# Worker image (Phase 14) — runs the OpenClaude bridge for a DELEGATED WORKER inside a container, so
+# the worker's Bash/tools are OS-confined (FS + process isolation). The duck itself is NEVER
+# containerized. At runtime the harness bind-mounts the per-run workspace rw at /workspace and the
+# agent def's `volumes:` read-only; nothing else on the host is reachable.
+#
+# Build (a DEPLOY step — the harness never builds images at runtime):
+#   docker build -f Dockerfile.worker -t dack/worker:latest .
+# Then set in dack.config.yaml:
+#   runtime.worker_sandbox: { enabled: true, image: dack/worker:latest }
+#
+# REBUILD after ANY edit to openclaude-bridge/*.ts — the bridge is BAKED IN, not bind-mounted, because
+# the host's node_modules are darwin-built and won't run on linux. (Pin the base tag further for prod.)
+FROM oven/bun:1
+
+# The OpenClaude SDK's bash-sandbox runs certain commands in a user-space sandbox; on Linux it uses
+# **bubblewrap** (its container-native backend) and falls back to a docker daemon if bwrap is absent —
+# which can't exist inside this container (no docker-in-docker), so it crashes ("failed to connect to
+# the docker API"). Installing bubblewrap + socat is the SDK's own prescribed fix for running in a
+# container, and keeps the SDK's per-command sandbox without any nested docker.
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends bubblewrap socat \
+  && rm -rf /var/lib/apt/lists/*
+
+# Install LINUX node_modules from the committed lockfile (its own layer — cached unless deps change).
+WORKDIR /app/openclaude-bridge
+COPY openclaude-bridge/package.json openclaude-bridge/bun.lock ./
+RUN bun install --frozen-lockfile
+
+# Bake the bridge sources. The harness invokes `bun run /app/openclaude-bridge/bridge.ts`; bun resolves
+# node_modules from the script's dir (here), so the runtime cwd (the mounted /workspace) doesn't matter.
+COPY openclaude-bridge/*.ts ./
+
+# Default cwd; overridden at runtime by `docker run -w /workspace` (the bind-mounted, writable workspace).
+WORKDIR /workspace
