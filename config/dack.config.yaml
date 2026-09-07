@@ -42,13 +42,13 @@ mcp_servers:
     # Paths are RELATIVE TO THE AGENT'S WORKDIR — the SOUL repo (the bridge chdirs there
     # before loading the SDK, so MCP stdio servers spawn from soul/) — hence ../
     transport: { type: stdio, command: ../.venv/bin/python3, args: [-m, sibyl_memory_mcp] }
-    env: { SIBYL_MEMORY_DB: "../.sibyl-data/memory.db", SIBYL_TENANT_ID: "nora" }
+    env: { SIBYL_MEMORY_DB: "../.sibyl-data/memory.db" }  # tenant = server default; isolation is the DB path
     tier: read
     trust: public                   # bodies can contain guest-supplied text → treat as data
     tools: [memory_recall, memory_search, memory_list, memory_get_state]
   - name: sibyl-write
     transport: { type: stdio, command: ../.venv/bin/python3, args: [-m, sibyl_memory_mcp] }
-    env: { SIBYL_MEMORY_DB: "../.sibyl-data/memory.db", SIBYL_TENANT_ID: "nora" }
+    env: { SIBYL_MEMORY_DB: "../.sibyl-data/memory.db" }  # tenant = server default; isolation is the DB path
     tier: post
     trust: public
     tools: [memory_remember, memory_set_state, memory_record_event]

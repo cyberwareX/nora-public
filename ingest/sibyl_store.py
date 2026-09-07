@@ -10,10 +10,13 @@ import os
 from datetime import date
 from typing import Any
 
-from sibyl_memory_client import MemoryClient
+from sibyl_memory_client import DEFAULT_TENANT, MemoryClient
 
 DB = os.environ.get("SIBYL_MEMORY_DB", ".sibyl-data/memory.db")
-TENANT = os.environ.get("SIBYL_TENANT_ID", "nora")
+# One tenant per STORE FILE: the sibyl-memory-mcp server (0.2.1) resolves DEFAULT_TENANT and has no
+# SIBYL_TENANT_ID override (the env var in older docs is dead code) — so the writer must use the
+# same default or the agent reads an empty tenant. Isolation is the DB path, one store per agent.
+TENANT = os.environ.get("SIBYL_TENANT_ID") or DEFAULT_TENANT
 
 
 def client() -> MemoryClient:
