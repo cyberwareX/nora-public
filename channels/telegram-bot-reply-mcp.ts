@@ -82,7 +82,21 @@ server.tool(
       if (replyTo) {
         opts.reply_to_message_id = parseInt(replyTo, 10);
       }
-      const msg = await bot.api.sendMessage(chatId, text, opts);
+      let msg;
+      try {
+        msg = await bot.api.sendMessage(chatId, text, opts);
+      } catch (e: unknown) {
+        // The reply-target message may be deleted/edited/never-existed — a threading nicety must
+        // not cost the delivery (a live cycle failed 3× on exactly this 400). Fall back to a plain
+        // send; the guest still hears back, just unthreaded.
+        const m = e instanceof Error ? e.message : String(e);
+        if (opts.reply_to_message_id && /repl(y|ied).*not found|message to be replied/i.test(m)) {
+          console.error('[telegram-bot-reply] reply-target gone — resending unthreaded');
+          msg = await bot.api.sendMessage(chatId, text);
+        } else {
+          throw e;
+        }
+      }
       return {
         content: [
           {
