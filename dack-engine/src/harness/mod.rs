@@ -2654,11 +2654,11 @@ mod tests {
     fn build_baton_surfaces_telegram_source_refs() {
         let mut stim = poisoned_stimulus();
         stim.payload = serde_json::json!({
-            "chat_id": 80375347, "message_id": 42, "text": "gm duck",
+            "chat_id": 111111111, "message_id": 42, "text": "gm duck",
             "from_username": "mcfrog_xbt", "chat_type": "private"
         });
         let baton = build_baton(&perceive_output(), &stim, "runlogs/r#run".into(), TrustTier::from("org"));
-        assert_eq!(baton.refs.get("source_chat_id").map(String::as_str), Some("80375347"), "chat_id (a number) crosses as a ref");
+        assert_eq!(baton.refs.get("source_chat_id").map(String::as_str), Some("111111111"), "chat_id (a number) crosses as a ref");
         assert_eq!(baton.refs.get("source_from").map(String::as_str), Some("mcfrog_xbt"));
         assert!(!serde_json::to_string(&baton).unwrap().contains("gm duck"), "raw text must not ride the baton");
     }
@@ -3222,7 +3222,7 @@ mod tests {
         let mut stim = poisoned_stimulus();
         stim.payload_tier = TrustTier::self_();
         stim.payload = serde_json::json!({
-            "chat_id": 80375347i64, "message_id": 379, "text": "x", "items": [{"message_id": 1}]
+            "chat_id": 111111111i64, "message_id": 379, "text": "x", "items": [{"message_id": 1}]
         });
         harness.dispatch(stim, &Default::default()).await.unwrap();
 
@@ -3236,7 +3236,7 @@ mod tests {
         // scalars, so the deferred reply still resolves its chat (the "no source chat in scope" bug). The
         // bulky `items` array is stripped — scope is env-only, not the whole batch.
         let scope = cont.payload.get("scope").expect("continuation carries a scope");
-        assert_eq!(scope.get("chat_id").and_then(|v| v.as_i64()), Some(80375347), "scope keeps the origin chat");
+        assert_eq!(scope.get("chat_id").and_then(|v| v.as_i64()), Some(111111111), "scope keeps the origin chat");
         assert_eq!(scope.get("message_id").and_then(|v| v.as_i64()), Some(379), "scope keeps the latest message");
         assert!(scope.get("items").is_none(), "the batch `items` array is stripped from the carried scope");
 
@@ -3545,14 +3545,14 @@ mod tests {
             // Static operator config env (e.g. telegram-send destinations) — injected alongside.
             env: std::collections::BTreeMap::from([("TELEGRAM_DESTINATIONS".into(), "{\"op\":1}".into())]),
         };
-        let extra = std::collections::BTreeMap::from([("TELEGRAM_REPLY_CHAT".to_string(), "80375347".to_string())]);
+        let extra = std::collections::BTreeMap::from([("TELEGRAM_REPLY_CHAT".to_string(), "111111111".to_string())]);
         let cfg = build_mcp_config(&server, Some("bearer42"), &extra);
         assert_eq!(cfg["type"], "stdio");
         assert_eq!(cfg["env"]["X_BEARER_TOKEN"], "bearer42");
         // Static env is injected (operator config the server needs).
         assert_eq!(cfg["env"]["TELEGRAM_DESTINATIONS"], "{\"op\":1}");
         // Payload-scoped env is merged into the server's env (the destination-lock mechanism).
-        assert_eq!(cfg["env"]["TELEGRAM_REPLY_CHAT"], "80375347");
+        assert_eq!(cfg["env"]["TELEGRAM_REPLY_CHAT"], "111111111");
         assert_eq!(cfg["args"][1], "nonexistent-xyz.ts", "non-path arg left as-is");
     }
 

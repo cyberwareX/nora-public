@@ -63,3 +63,46 @@ python3 -m venv .venv && .venv/bin/pip install sibyl-memory-mcp pyyaml
 
 Then message your bot on Telegram — or open the Booking Desk and `/book Anna A1 +0 +2`,
 follow the guest deep link it prints, and watch Nora greet you by name.
+
+## What's live-proven (not just built)
+
+- Guest Q&A from exact-key Sibyl recall (wifi, parking, policies) — with escalation to the owner
+  when memory doesn't know.
+- **Operator relay**: answer an escalation in your own chat; Nora delivers to the guest through a
+  privileged, allow-listed send tool (only bound guests / reservation chats / escalation sources
+  are reachable; unknown ids refuse; identical repeats are suppressed; every attempt audited).
+- **Conversation continuity** twice over: the engine's per-chat runlog thread view
+  (`context: {tag_key: true}`) plus a Sibyl HOT-tier `chat:<id>:state` doc — returning guests are
+  greeted as returning.
+- **The notify lane**: harness failures, ingest alerts, and agent escalations reach the operator
+  through one connector-agnostic router (telegram + jsonl audit today; email/others are just more
+  connectors).
+- Booking pipeline: email → strict parser → Sibyl entities + `today:` rollups → agent wake.
+
+## Gotchas we hit so you don't
+
+- **Editing the soul while Nora runs**: the harness's integrity tripwire reverts uncommitted soul
+  changes within a cycle — land soul edits as commits in the soul repo (`git -C soul commit`).
+- **The Booking Desk is its own process** (`demo/booking_desk.py`) — the daemon doesn't start it.
+- **MCP stdio paths are soul-relative**: the bridge chdirs to the soul repo before loading the
+  SDK, so server commands/env paths in `mcp_servers` resolve from `soul/` (hence the `../`).
+- **Your agent's own memory store must be `trust: self`** — labeling it `public` makes every
+  memory read degrade the cycle's trust and (correctly) strips `min_trust`-gated tools like the
+  relay. The taint model working as designed, against a mislabel.
+- **sibyl-memory-mcp 0.2.1 ignores `SIBYL_TENANT_ID`** (the env var in older docs is absent from
+  the code) — the server resolves its default tenant, so any out-of-band writer must use the
+  client's `DEFAULT_TENANT`. Isolation is the DB file path, one store per agent.
+
+## Feedback to Sibyl Labs (from building this)
+
+1. `SIBYL_TENANT_ID` is documented but dead in `sibyl-memory-mcp` 0.2.1 — either honor it or
+   remove it from the docs (it cost us a debugging round: agent and writer silently split tenants).
+2. Per-category **write ACLs** would let an operator make `unit`/`policy`/`reservation`
+   ingest-only while the agent keeps `guest`/`kb-case`/journal — today that separation is only
+   soul discipline.
+3. The `verdict` on zero-result searches is genuinely useful — our soul teaches "count:0 is
+   normal" because of it.
+
+## License
+
+MIT — see [LICENSE](LICENSE).

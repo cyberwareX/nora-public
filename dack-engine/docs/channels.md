@@ -71,7 +71,7 @@ Its format (every key optional; defaults shown — the file it reads comes from 
 ```json
 {
   "harness_webhook": "http://127.0.0.1:8787",
-  "operator_user_id": 80375347,
+  "operator_user_id": 111111111,
   "op_path": "/telegram/op",
   "pub_path": "/telegram/pub",
   "groups": { "-1001234567890": "/telegram/trusted" }
