@@ -84,6 +84,10 @@ follow the guest deep link it prints, and watch Nora greet you by name.
 - **Editing the soul while Nora runs**: the harness's integrity tripwire reverts uncommitted soul
   changes within a cycle — land soul edits as commits in the soul repo (`git -C soul commit`).
 - **The Booking Desk is its own process** (`demo/booking_desk.py`) — the daemon doesn't start it.
+- **A trusted staff group needs TWO ingress config entries**: `groups: {"<chat_id>": "/telegram/op"}`
+  routes it to the org lane, but group messages are batched-not-forwarded by default — add the same
+  id to `excluded_groups` or the trusted route never fires. Also give the bot group admin (or
+  disable BotFather privacy mode) so it sees regular member messages.
 - **MCP stdio paths are soul-relative**: the bridge chdirs to the soul repo before loading the
   SDK, so server commands/env paths in `mcp_servers` resolve from `soul/` (hence the `../`).
 - **Your agent's own memory store must be `trust: self`** — labeling it `public` makes every
