@@ -26,21 +26,22 @@ server.registerTool(
   'escalate',
   {
     description:
-      'Notify a human. `audience` "op" (default) reaches the owner; "cleaners" reaches the cleaning ' +
-      'crew. `severity`: "escalation" (a guest needs a human — default), "alert" (something is wrong), ' +
-      '"info" (a briefing, e.g. new booking or daily notice). One clear line in `message`: unit, who, ' +
-      'what, by when. Destinations are fixed by the operator — you choose only the text. Escalating ' +
-      'IS handling it: after this returns ok, the human side is covered.',
+      'Notify humans. `audience`: "staff" (default — the front team: day-to-day guest needs, ' +
+      'meet-ups, repairs, briefings), "cleaners" (cleaning crew: notices and go-aheads), "owner" ' +
+      '(emergencies, money, fraud, anomalies — scarce attention, use sparingly). `severity`: ' +
+      '"escalation" (a human must act — default), "alert" (something is wrong), "info" (a briefing). ' +
+      'One clear line per item in `message`. Destinations are operator config — you choose only text ' +
+      'and audience. Escalating IS handling it.',
     inputSchema: {
       message: z.string().min(1).max(2000),
       severity: z.enum(['escalation', 'alert', 'info']).optional(),
-      audience: z.enum(['op', 'cleaners']).optional(),
+      audience: z.enum(['staff', 'cleaners', 'owner', 'op']).optional(),
     },
   },
   async ({ message, severity, audience }: { message: string; severity?: string; audience?: string }) => {
     const n = {
       severity: severity ?? 'escalation',
-      audience: audience ?? 'op',
+      audience: audience === 'op' ? 'owner' : (audience ?? 'staff'),
       source: 'agent',
       title: `Nora ${severity ?? 'escalation'}`,
       body: message,

@@ -14,7 +14,7 @@ import { appendFileSync, readFileSync } from 'node:fs'
 
 type Notification = {
   severity: 'escalation' | 'alert' | 'error' | 'info'
-  audience?: 'op' | 'cleaners'
+  audience?: string
   source?: string
   title?: string
   body?: string
@@ -25,8 +25,10 @@ type Notification = {
 
 type Cfg = {
   listen: string
-  op_chat_ids: number[]
-  cleaners_chat_ids: number[]
+  op_chat_ids: number[] // legacy alias for audiences.owner
+  cleaners_chat_ids: number[] // legacy alias for audiences.cleaners
+  /** audience → telegram chat ids. Unknown/absent audience falls back to owner. */
+  audiences: Record<string, number[]>
   // severity → connector list. "telegram" delivers; "log" is jsonl-only (always logged anyway).
   severity_routes: Record<string, string[]>
   dedup_window_sec: number
@@ -37,6 +39,7 @@ const DEF: Cfg = {
   listen: '127.0.0.1:8794',
   op_chat_ids: [],
   cleaners_chat_ids: [],
+  audiences: {},
   severity_routes: { escalation: ['telegram'], alert: ['telegram'], error: ['telegram'], info: ['log'] },
   dedup_window_sec: 600,
   hourly_cap: 20,
@@ -105,7 +108,8 @@ async function deliver(n: Notification): Promise<{ delivered: boolean; suppresse
   }
   stormNoticed = false
 
-  const chats = n.audience === 'cleaners' && cfg.cleaners_chat_ids.length ? cfg.cleaners_chat_ids : cfg.op_chat_ids
+  const aud = { owner: cfg.op_chat_ids, cleaners: cfg.cleaners_chat_ids, ...cfg.audiences }
+  const chats = (n.audience && aud[n.audience]?.length ? aud[n.audience] : aud['owner']) ?? []
   const text = `${ICON[n.severity] ?? ''} ${n.title ?? n.severity}\n${n.body ?? ''}${n.source_chat ? `\nguest chat: ${n.source_chat}` : ''}${n.source ? `\n— ${n.source}` : ''}`
   let ok = false
   for (const id of chats) ok = (await tgSend(id, text)) || ok
@@ -144,4 +148,4 @@ Bun.serve({
     return new Response('not found', { status: 404 })
   },
 })
-console.error(`[notify] listening on ${cfg.listen}; op=${cfg.op_chat_ids.length} cleaners=${cfg.cleaners_chat_ids.length} telegram=${TOKEN ? 'on' : 'OFF'}`)
+console.error(`[notify] listening on ${cfg.listen}; audiences=${JSON.stringify(Object.fromEntries(Object.entries({ owner: cfg.op_chat_ids, cleaners: cfg.cleaners_chat_ids, ...cfg.audiences }).map(([k,v])=>[k,(v as number[]).length])))} telegram=${TOKEN ? 'on' : 'OFF'}`)

@@ -5,7 +5,7 @@ trigger: { type: webhook, path: /telegram/op }
 directive_tier: self
 emits: { type: telegram_message }
 coalesce: { mode: batch, adaptive: { initial_window_sec: 2, daily_credits: 200, max_window_sec: 60 } }
-entry: perceive
+entry: org/perceive
 priority: high
 ---
 Standing directive (trusted): the **owner or vetted staff** wrote to you (`org` trust). Answer

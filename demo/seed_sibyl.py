@@ -24,6 +24,9 @@ def main() -> None:
     for slug, body in (spec.get("policies") or {}).items():
         c.set_entity("policy", slug, body)
         print(f"policy {slug}: seeded")
+    for slug, body in (spec.get("staff") or {}).items():
+        c.set_entity("staff", slug, body)
+        print(f"staff {slug}: seeded")
     for slug, body in (spec.get("kb_cases") or {}).items():
         c.set_entity("kb-case", slug, body)
         print(f"kb-case {slug}: seeded")

@@ -2,6 +2,23 @@
 business_name: "Cedar Loft Stays"
 host_name: "Nora"
 
+# Who is who — seeded as Sibyl `staff` entities so Nora can name who handles what.
+# Telegram DELIVERY ids live in notify.config.json (operator config, never model-writable);
+# this directory is what Nora KNOWS about the team.
+staff:
+  front-team:
+    role: "check-in / check-out meets, day-to-day guest needs"
+    members: ["David"]
+    reach: "escalate audience=staff"
+  cleaners:
+    role: "cleaning between stays"
+    members: ["Marta"]
+    reach: "escalate audience=cleaners"
+  owner:
+    role: "policy, money, emergencies — final word"
+    members: ["the owner"]
+    reach: "escalate audience=owner (sparingly)"
+
 units:
   A1:
     address: "Cedar Loft, 12 Birchweg, staircase B (map pin in your welcome message)"
