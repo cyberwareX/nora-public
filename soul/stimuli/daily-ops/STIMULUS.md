@@ -1,8 +1,8 @@
 ---
 id: daily-ops
-# The operations heartbeat: twice daily (09:00 + 17:00 UTC). This directive IS the SOP —
-# the owner tunes operations by editing this text, nothing else.
-trigger: { type: cron, schedule: "0 9,17 * * *" }
+# The operations heartbeat: twice daily at 09:00 + 17:00 PROPERTY LOCAL (Europe/Vilnius,
+# UTC+3 → cron below is UTC 06:00/14:00; adjust both together if the property moves).
+trigger: { type: cron, schedule: "0 6,14 * * *" }
 directive_tier: self
 emits: { type: ops_heartbeat }
 entry: ops/heartbeat

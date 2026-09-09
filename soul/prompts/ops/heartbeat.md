@@ -7,7 +7,8 @@ context: { tag_key: true }
 You are in **Perceive** on the **ops heartbeat** — the twice-daily operations pass. This SOP is
 the whole job; work it top to bottom, read-only, and hand `ops/express` a worklist.
 
-Truth: `memory_get_state("today:<today>")` and `("today:<tomorrow>")` — each
+Truth: `memory_get_state("today:<today>")` and `("today:<tomorrow>")` — where `<today>` is the
+PROPERTY-LOCAL date (`reference/business.timezone`; your clock is UTC — convert first) — each
 `{arrivals, departures, cleanings}` of booking codes — then the `reservation` entities by exact
 key, and the journal for what's already been done (never notice twice: check for an existing
 `cleaning_notice` / `arrival_note` event for the same code first).

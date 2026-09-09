@@ -1,6 +1,10 @@
 # The demo property — seed truth for Sibyl. Owners fork this file for their own place.
 business_name: "Cedar Loft Stays"
 host_name: "Nora"
+# The property's LOCAL timezone — seeded into reference/business. The agent's clock and all
+# runlog/cron times are UTC; the soul teaches converting for anything guest-facing.
+timezone: "Europe/Vilnius"
+utc_offset_hint: "+03:00 (EEST summer / +02:00 EET winter)"
 
 # Who is who — seeded as Sibyl `staff` entities so Nora can name who handles what.
 # Telegram DELIVERY ids live in notify.config.json (operator config, never model-writable);
@@ -36,6 +40,23 @@ units:
     checkin_time: "15:00"
     checkout_time: "11:00"
     quirks: "Balcony door sticks in warm weather — lift the handle while pulling."
+
+  B1:
+    address: "Cedar Loft, 12 Birchweg, staircase B, 3rd floor left"
+    wifi_ssid: "CedarLoft-B1"
+    wifi_pass: "demo-only-m0untain"
+    parking: "Courtyard spot #5"
+    checkin_time: "15:00"
+    checkout_time: "11:00"
+    quirks: "The dishwasher's start button needs a long press."
+  B2:
+    address: "Cedar Loft, 12 Birchweg, staircase B, 3rd floor right"
+    wifi_ssid: "CedarLoft-B2"
+    wifi_pass: "demo-only-r1verbed"
+    parking: "Street parking free 18:00–09:00"
+    checkin_time: "15:00"
+    checkout_time: "11:00"
+    quirks: "Blackout blinds remote lives in the nightstand drawer."
 
 policies:
   early-checkin:

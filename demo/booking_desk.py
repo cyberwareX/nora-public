@@ -17,12 +17,16 @@ from __future__ import annotations
 import json
 import os
 import re
+import sys
 import time
 import urllib.parse
 import urllib.request
 from datetime import date, timedelta
 from email.message import EmailMessage
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).parent.parent / "ingest"))
+from sibyl_store import client  # read-only here: units + reservations for availability
 
 TOKEN = Path(os.environ.get("FEEDER_TOKEN_FILE", "secrets/feeder.token")).read_text().strip()
 API = f"https://api.telegram.org/bot{TOKEN}"
@@ -32,13 +36,65 @@ BOT_USERNAME = os.environ.get("NORA_BOT_USERNAME", "nora_demo_bot")
 ALLOWED = {int(x) for x in os.environ.get("FEEDER_ALLOWED_IDS", "").split(",") if x.strip()}
 
 HELP = (
-    "Booking Desk — I pretend to be the booking platform.\n\n"
+    "Booking Desk — I pretend to be the booking platform. \U0001F3E8\n\n"
+    "/units — rooms + availability for the next days\n"
     "/book <name> <unit> <check_in> <check_out>\n"
     "    e.g. /book Anna A1 +0 +2   (dates: YYYY-MM-DD or +N days from today)\n"
     "/cancel <code>\n"
-    "/phish   (send a scam-shaped platform mail — watch the operator alert)\n\n"
-    "Each booking emails a confirmation into Nora's inbox; she takes it from there."
+    "/phish — send a scam-shaped platform mail (watch the operator alert)\n\n"
+    "Each booking emails a confirmation into Nora's inbox; she takes it from there.\n"
+    "Overlapping bookings are refused — one stay per room per night, like the real thing."
 )
+
+MAX_BOOKINGS_PER_USER_DAY = 5
+_user_bookings: dict = {}  # user_id -> [epoch, ...] rolling day window
+
+
+def _active_reservations():
+    """Non-cancelled reservations from Sibyl (the same truth Nora reads)."""
+    c = client()
+    out = []
+    for e in c.list_entities(category="reservation", limit=200):
+        b = e.get("body") or {}
+        if b.get("status") in (None, "cancelled", "cleaned", "departed"):
+            continue
+        if b.get("check_in") and b.get("check_out"):
+            out.append({"code": e["name"], **b})
+    return out
+
+
+def _units():
+    c = client()
+    return sorted(e["name"] for e in c.list_entities(category="unit", limit=50))
+
+
+def _conflict(unit: str, check_in: str, check_out: str):
+    """First overlapping reservation for `unit`, or None. Half-open [check_in, check_out)."""
+    for r in _active_reservations():
+        if r.get("unit") != unit:
+            continue
+        if check_in < r["check_out"] and check_out > r["check_in"]:
+            return r
+    return None
+
+
+def cmd_units(chat_id: int) -> None:
+    try:
+        units, res = _units(), _active_reservations()
+    except Exception as e:
+        send(chat_id, f"availability store unreachable: {e}")
+        return
+    today = date.today()
+    lines = ["Rooms & the next 7 nights (■ booked · · free):"]
+    for u in units:
+        marks = []
+        for d in range(7):
+            day = (today + timedelta(days=d)).isoformat()
+            nxt = (today + timedelta(days=d + 1)).isoformat()
+            marks.append("■" if _conflict(u, day, nxt) else "·")
+        lines.append(f"{u}:  {' '.join(marks)}")
+    lines.append(f"({today.isoformat()} → +6 days; /book <name> <unit> +N +M)")
+    send(chat_id, "\n".join(lines))
 
 
 def api(method: str, **params) -> dict:
@@ -80,6 +136,31 @@ def cmd_book(chat_id: int, args: list[str]) -> None:
     if not (check_in and check_out):
         send(chat_id, "dates must be YYYY-MM-DD or +N (days from today)")
         return
+    if check_out <= check_in:
+        send(chat_id, "check-out must be after check-in")
+        return
+    # rate cap per tester
+    now = time.time()
+    hist = [t for t in _user_bookings.get(chat_id, []) if now - t < 86400]
+    if len(hist) >= MAX_BOOKINGS_PER_USER_DAY:
+        send(chat_id, f"demo cap: {MAX_BOOKINGS_PER_USER_DAY} bookings/day per tester — try /cancel or come back later")
+        return
+    # room must exist; stay must not overlap (the real-platform behavior testers expect)
+    try:
+        units = _units()
+        if unit not in units:
+            send(chat_id, f"no room {unit} — we have: {', '.join(units)} (/units for availability)")
+            return
+        clash = _conflict(unit, check_in, check_out)
+        if clash:
+            free = [u for u in units if not _conflict(u, check_in, check_out)]
+            hint = f" Free for those dates: {', '.join(free)}." if free else " No rooms free for those dates."
+            send(chat_id, f"{unit} is taken {clash['check_in']}→{clash['check_out']} ({clash['code']}).{hint}")
+            return
+    except Exception as e:
+        send(chat_id, f"availability check failed ({e}) — booking anyway, demo mode")
+    hist.append(now)
+    _user_bookings[chat_id] = hist
     code = f"BK-{check_in[5:7]}{check_in[8:10]}-{unit}"
     write_eml(
         f"Booking confirmed — {code}",
@@ -126,6 +207,8 @@ def handle(update: dict) -> None:
     cmd = parts[0].split("@")[0].lower()
     if cmd == "/book":
         cmd_book(chat_id, parts[1:])
+    elif cmd == "/units":
+        cmd_units(chat_id)
     elif cmd == "/cancel":
         cmd_cancel(chat_id, parts[1:])
     elif cmd == "/phish":

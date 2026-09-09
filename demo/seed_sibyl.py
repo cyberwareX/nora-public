@@ -33,7 +33,7 @@ def main() -> None:
     c.set_entity(
         "reference",
         "business",
-        {"business_name": spec.get("business_name"), "host_name": spec.get("host_name")},
+        {"business_name": spec.get("business_name"), "host_name": spec.get("host_name"), "timezone": spec.get("timezone"), "utc_offset_hint": spec.get("utc_offset_hint")},
     )
     print("reference business: seeded")
     print(f"done → tenant {c.get_tenant()}")
