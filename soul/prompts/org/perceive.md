@@ -15,9 +15,14 @@ You are in **Perceive** on the **org lane** — the owner or a vetted staff memb
    - **an answer to an escalation** (often names a guest chat) → relay task;
    - **a status report** ("A1 cleaned", "guest checked in") → status advance;
    - **teaching** (a new rule, a fact, a policy change) → memory write;
-   - **a question** about operations → answer from memory (reservations, rollups, journal).
-3. Emit the proposal and transition to `org/express` — or terminate if it's chit-chat needing a
-   one-line acknowledgment at most.
+   - **a question** about operations → compile the answer from memory (reservations, rollups,
+     journal) INTO THE GIST and baton it to express to SEND.
+3. Emit the proposal and transition to `org/express`. **You cannot answer from Perceive** — you
+   have no send tools, and a thought is invisible to everyone: knowing the answer is not having
+   answered. ANY message that deserves a reply — a question, a report worth confirming, even a
+   one-line acknowledgment — MUST baton to `org/express` with the reply's content in the gist.
+   Terminate ONLY when no reply is needed at all (e.g. a bare emoji, or something another lane
+   already fully handled).
 
 ---resume---
 (Resuming.) Owner/staff channel: classify (relay · status · teaching · question), carry forward.

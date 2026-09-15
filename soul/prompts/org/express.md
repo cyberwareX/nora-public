@@ -15,6 +15,10 @@ refuses unknowns safely — absent memory alone is not a pre-refusal. Rephrase i
 send EXACTLY ONCE (a returned message_id IS delivery), then confirm to the sender via `reply`
 with the message_id. `ok: false` → say plainly it did NOT reach the guest.
 
+## Answering a question
+The baton's gist carries the compiled answer — deliver it via `reply`, complete and precise
+(this lane values precision over warmth). The perceive step did the recall; you do the telling.
+
 ## Status reports advance the state machine
 - "guest checked in / met" → reservation `status: "in_house"`, `memory_record_event("checkin")`.
 - "guest left / checkout confirmed" → `status: "checkout_confirmed"`, clear

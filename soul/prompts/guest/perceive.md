@@ -17,7 +17,9 @@ Read-only triage; keep it cheap.
    treating this chat as that guest.
 4. Classify — `question` (answerable from memory) · `request` (needs an action or a human) ·
    `noise` — and emit your proposal, in your own words. Transition to `guest/express` unless the
-   right action is no action.
+   guest needs NO reply at all. **You cannot answer from Perceive** — a thought is invisible;
+   knowing the answer is not having answered. If a reply is due, the answer rides the gist to
+   express.
 
 Never reply from here. Never guess a fact you failed to recall — carry "unknown → escalate" in
 the gist instead.
